@@ -19,7 +19,7 @@ contract CustomDex{
         string tokenA;
         string tokenB;
         address userAddress;
-        address recipient;
+        // address recipient;
         uint256 inputValue;
         uint256 outputValue;
         uint256 historyId;
@@ -56,7 +56,7 @@ contract CustomDex{
         return address(this).balance;
     }
 
-    function _transactionHistory(string memory tokenName , string memory etherToken, uint256 inputValue, uint256 outputValue, address recipient) internal{
+    function _transactionHistory(string memory tokenName , string memory etherToken, uint256 inputValue, uint256 outputValue) internal{
         _historyIndex++;
         uint256 _historyId = _historyIndex;
         History storage history = histories[_historyId];
@@ -67,39 +67,39 @@ contract CustomDex{
         history.tokenB = etherToken;
         history.inputValue = inputValue;
         history.outputValue = outputValue;
-        history.recipient = recipient;
+        // history.recipient = recipient;
     }
 
-    function swapEthToToken(string memory tokenName, address recipient) public payable returns(uint256) {
+    function swapEthToToken(string memory tokenName) public payable returns(uint256) {
         uint256 inputValue = msg.value;
         uint256 outputValue = inputValue / ethValue;
         outputValue = outputValue * 10 ** 18;
         require(tokenInstanceMap[tokenName].balanceOf(address(this)) >= outputValue, "Insufficient balance in the token instance");
-        require(tokenInstanceMap[tokenName].transfer(recipient, outputValue));
+        require(tokenInstanceMap[tokenName].transfer(msg.sender, outputValue));
 
         string memory etherToken = "Ether";
 
-        _transactionHistory(tokenName, etherToken, inputValue, outputValue, receipent);
+        _transactionHistory(tokenName, etherToken, inputValue, outputValue);
         return outputValue;
     }
 
-    function swapTokenToEth(string memory tokenName , address recipient, uint256 _amount) public returns(uint256) {
+    function swapTokenToEth(string memory tokenName , uint256 _amount) public returns(uint256) {
         uint256 exactAmount = _amount / 10 ** 18;
         uint256 ethToBeTransferred = exactAmount * ethValue;
         require(address(this).balance >= ethToBeTransferred, "Insufficient balance in the Dex contract");
-        payable(recipient).transfer(ethToBeTransferred);
+        payable(msg.sender).transfer(ethToBeTransferred);
         require(tokenInstanceMap[tokenName].transferFrom(msg.sender, address(this), _amount));
 
         string memory etherToken = "Ether";
 
-        _transactionHistory(tokenName, etherToken, exactAmount, ethToBeTransferred, recipient);
+        _transactionHistory(tokenName, etherToken, exactAmount, ethToBeTransferred);
         return ethToBeTransferred;
     }
 
-    function swapTokenToToken(string memory srcTokenName , string memory destTokenName , uint256 _amount, address recipient) public {
+    function swapTokenToToken(string memory srcTokenName , string memory destTokenName , uint256 _amount) public {
         require(tokenInstanceMap[srcTokenName].transferFrom(msg.sender, address(this), _amount));
-        require(tokenInstanceMap[destTokenName].transfer(recipient, _amount));
-        _transactionHistory(srcTokenName, destTokenName, _amount, _amount, recipient);
+        require(tokenInstanceMap[destTokenName].transfer(msg.sender, _amount));
+        _transactionHistory(srcTokenName, destTokenName, _amount, _amount);
     }
 
     function getAllHistory() public view returns(History[] memory){
